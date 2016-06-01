@@ -1,6 +1,6 @@
 PHP-DAEMON
 
-~~~
+~~~php
 <?php
 /**
  * User: xiaofeng

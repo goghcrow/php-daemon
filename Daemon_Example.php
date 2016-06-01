@@ -19,7 +19,7 @@ require_once __DIR__ . "/Daemon.php";
 
 // 循环执行,同一任务防重
 // kill pid 关闭
-// kill -1 重启
+// kill -1 pid 重启
 Daemon::loopOnce(function($n) {
     error_log(time());
     sleep(1);
@@ -27,7 +27,7 @@ Daemon::loopOnce(function($n) {
 
 // 循环执行,同一任务可并行执行
 // kill pid 关闭
-// kill -1 重启
+// kill -1 pid 重启
 //Daemon::loop(function($n) {
 //    error_log(time());
 //    sleep(1);
