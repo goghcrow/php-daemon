@@ -81,7 +81,6 @@ class Daemon {
         $this->loop = $loop;
         $this->single = $single;
 
-        clearstatcache();
         $this->registerEventHandler(); // register once, and forked threads inherit all handlers
     }
 
@@ -91,6 +90,9 @@ class Daemon {
     public function parentProcess() {
         logProcessHierarchy("Parent Process Hierarchy");
 
+        clearstatcache();
+        // http://stackoverflow.com/questions/12116121/php-umask0-what-is-the-purpose
+        umask(0);
         $pid = pcntl_fork();
         if ($pid === -1) {
             throw new RuntimeException(__METHOD__ . " ==> pcntl_fork(1) fail");
@@ -151,7 +153,7 @@ class Daemon {
             declare(ticks = 1) {
                 while ($this->isRunning) {
                     call_user_func($this->task, ++$this->loopTimes);
-                    pcntl_signal_dispatch();
+                    pcntl_signal_dispatch(); // optional
                     if ($this->loopTimes === PHP_INT_MAX) {
                         $this->loopTimes = 0;
                     }
