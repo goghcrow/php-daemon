@@ -7,26 +7,30 @@
 namespace xiaofeng\daemon;
 
 use RuntimeException;
-if (!function_exists("\\pcntl_fork")) {
-    throw new RuntimeException("PCNTL extension needed");
-}
-if (!function_exists("\\posix_getpid")) {
-    throw new RuntimeException("POSIX extension needed");
-}
+
+// 扩展检查
+if (!function_exists("\\pcntl_fork")) { throw new RuntimeException("PCNTL extension needed"); }
+if (!function_exists("\\posix_getpid")) { throw new RuntimeException("POSIX extension needed");}
+
+// 开启错误, 启动时注意重定向 /dev/null 2>&1
+error_reporting(E_ALL);
 date_default_timezone_set("Asia/Shanghai");
 
-
-defined("DEBUG") or define("DEBUG", false);
-define("__LOG_DIR__", __DIR__);
-error_reporting(E_ALL);
-
+// 定义pid写入路径
+define("__PID_DIR__", __DIR__);
+// 定义日志文件路径
 // define("__LOG_FILE__", sprintf(__LOG_DIR__ . "/%s_%d.log", date("Y-m-d"), posix_getpid()));
-define("__LOG_FILE__", sprintf(__LOG_DIR__ . "/%s.log", date("Y-m-d")));
-ini_set("error_log", __LOG_FILE__);
-ini_set("log_errors_max_len", 4096); // http://php.net/manual/en/function.error-log.php#97546
-ini_set("memory_limit",  -1);
-$_SERVER["time_limit"] = -1/*second*/; // when run time reach time_limit, daemon will restart
+define("__LOG_FILE__", sprintf(__DIR__ . "/%s.log", date("Y-m-d")));
 
+// 设置error_log
+ini_set("error_log", __LOG_FILE__);
+// 加大error_log单条消息长度
+ini_set("log_errors_max_len", 4096); // http://php.net/manual/en/function.error-log.php#97546
+
+// 设置内存限制, -1不限制, 否则达到限制90%将会触发重启脚本
+ini_set("memory_limit",  -1);
+// 设置执行时间, -1不限制, 否则达到执行时间脚本将会重启
+$_SERVER["time_limit"] = -1/*second*/;
 
 
 /**
@@ -123,13 +127,8 @@ foreach([SIGTERM, SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGPIPE, SIGALRM] as $sig) {
 # SIGILL execute illegal
 # SIGPIPE write to a pipe without a process connected to the other end
 
+/*
 [
-//    SIG_IGN,
-//    SIG_DFL,
-//    SIG_ERR,
-//    SIGIOT,
-//    SIGCLD,
-//    SIGIO,
     SIGHUP,
     SIGINT,
     SIGQUIT,
@@ -162,5 +161,12 @@ foreach([SIGTERM, SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGPIPE, SIGALRM] as $sig) {
     SIGPWR,
     SIGSYS,
     SIGBABY,
+//    SIG_IGN,
+//    SIG_DFL,
+//    SIG_ERR,
+//    SIGIOT,
+//    SIGCLD,
+//    SIGIO,
 ];
 
+*/

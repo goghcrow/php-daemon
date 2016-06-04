@@ -81,7 +81,7 @@ class Daemon {
         $this->loop = $loop;
         $this->single = $single;
 
-        $this->registerEventHandler(); // register once, and forked threads inherit all handlers
+        // $this->registerEventHandler(); // register once, and forked threads inherit all handlers
     }
 
     /**
@@ -147,13 +147,13 @@ class Daemon {
 
         $this->isRunning = true;
         if ($this->loop) {
+            // replacing ticks by $this->tick()
             // 1. for tick_callback
             // 2. for signal
-            // TODO: tune ticks number
-            declare(ticks = 1) {
+            // declare(ticks = 1) {
                 while ($this->isRunning) {
                     call_user_func($this->task, ++$this->loopTimes);
-                    pcntl_signal_dispatch(); // optional
+                    $this->tick();
                     if ($this->loopTimes === PHP_INT_MAX) {
                         $this->loopTimes = 0;
                     }
@@ -162,7 +162,7 @@ class Daemon {
                 if ($this->restart) {
                     $this->restart();
                 }
-            }
+            // }
         } else {
             call_user_func($this->task, ++$this->loopTimes);
         }
@@ -196,14 +196,20 @@ class Daemon {
             $this->restart = false;
         });
 
-        pcntl_signal(SIGTERM, function() { $this->isRunning = false; }); // kill 15
-        pcntl_signal(SIGINT, function() { $this->isRunning = false; });  // kill 2  Ctrl-C
-        pcntl_signal(SIGQUIT, function() { $this->isRunning = false; }); // kill 3  Ctrl-\
+        pcntl_signal(SIGTERM, function() { $this->prepareStop("SIGTERM Exit"); }); // kill 15
+        pcntl_signal(SIGINT, function() { $this->prepareStop("SIGTERM SIGINT"); });  // kill 2  Ctrl-C
+        pcntl_signal(SIGQUIT, function() { $this->prepareStop("SIGTERM SIGQUIT"); }); // kill 3  Ctrl-\
         pcntl_signal(SIGHUP, function() { $this->prepareRestart("SIGHUB Restart"); }); // kill 1
 
         $once = true;
     }
 
+    /**
+     * don't invoke this method
+     *  remove declare(ticks = 1)
+     *  remove tick_function_handler
+     * @deprecated
+     */
     protected function registerEventHandler() {
         static $once = false;
         if ($once) return;
@@ -220,27 +226,57 @@ class Daemon {
                 $time_limit = isset($_SERVER["time_limit"]) ? intval($_SERVER["time_limit"]) : -1;
             }
 
-            $this->time_monitor($time_limit);
-            $this->memory_monitor($memory_limit);
+            $this->timeMonitor($time_limit);
+            $this->memoryMonitor($memory_limit);
         });
 
         $once = true;
     }
 
-    protected function memory_monitor($memory_limit) {
-        if ($memory_limit === -1 || memory_get_usage(true) < $memory_limit) {
+    protected function tick() {
+        pcntl_signal_dispatch();
+        $this->tickMonitor();
+    }
+
+    protected function tickMonitor() {
+        static $memory_limit = null;
+        static $time_limit = null;
+        if ($memory_limit === null) {
+            $memory_limit = \xiaofeng\utils\get_memory_limit();
+            $memory_limit = $memory_limit === -1 ? -1 : $memory_limit * 0.9; // * 0.9; // restart memory threshold
+            error_log("tick_function: get memory_limit " . \xiaofeng\utils\formatBytes($memory_limit));
+        }
+        if ($time_limit === null) {
+            $time_limit = isset($_SERVER["time_limit"]) ? intval($_SERVER["time_limit"]) : -1;
+        }
+
+        $this->timeMonitor($time_limit);
+        $this->memoryMonitor($memory_limit);
+    }
+
+    protected function memoryMonitor($memoryLimit) {
+        $memoryUsage = memory_get_usage(true);
+        if ($memoryLimit === -1 || $memoryUsage < $memoryLimit) {
             return true;
         }
-        $this->prepareRestart("tick_function: prepare to restart ==> memory_get_usage(true) > $memory_limit");
+        $memoryUsageFormated = \xiaofeng\utils\formatBytes($memoryUsage);
+        $memoryLimitFormated = \xiaofeng\utils\formatBytes($memoryLimit);
+        $this->prepareRestart("tick_function: prepare to restart ==> [memory_get_usage(true)] $memoryUsageFormated >= $memoryLimitFormated");
         return false;
     }
 
-    protected function time_monitor($time_limit) {
-        if ($time_limit === -1 || ((time() - $this->startTime) < $time_limit)) {
+    protected function timeMonitor($time_limit) {
+        $elapsed = (time() - $this->startTime);
+        if ($time_limit === -1 || $elapsed < $time_limit) {
             return true;
         }
-        $this->prepareRestart("tick_function: prepare to restart ==> (time() - \$this->startTime) > $time_limit");
+        $this->prepareRestart("tick_function: prepare to restart ==> [(time() - \$this->startTime)] $elapsed >= $time_limit");
         return false;
+    }
+
+    protected function prepareStop($reason) {
+        $this->isRunning = false;
+        error_log($reason);
     }
 
     protected function prepareRestart($reason) {
@@ -272,7 +308,7 @@ class Pid {
     protected $fpid;
 
     public function __construct($clazz) {
-        $dir = defined("__LOG_DIR__") ? __LOG_DIR__ : sys_get_temp_dir();
+        $dir = defined("__PID_DIR__") ? __PID_DIR__ : sys_get_temp_dir();
         $taskName = str_replace("\\", "_", $clazz);
         $this->fpid = $dir . "/$taskName.pid";
         error_log(__METHOD__ . ": fpid ==> " . $this->fpid);

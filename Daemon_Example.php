@@ -7,7 +7,6 @@
 
 namespace xiaofeng\daemon;
 
-define("DEBUG", true);
 require_once __DIR__ . "/Daemon.php";
 
 // env.php

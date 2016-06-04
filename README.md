@@ -10,15 +10,24 @@ PHP-DAEMON
 
 namespace xiaofeng\daemon;
 
-define("DEBUG", true);
 require_once __DIR__ . "/Daemon.php";
 
-// env.php
-//define("__LOG_DIR__", __DIR__); // 定义log目录
-//define("__LOG_FILE__", sprintf(__LOG_DIR__ . "/%s.log", date("Y-m-d"))); // 定义log文件名
-//ini_set("error_log", __LOG_FILE__); // 定义log文件位置
-//ini_set("memory_limit",  -1);          // 定义脚本内存阈值(*0.9),达到该值*重启
-//$_SERVER["time_limit"] = -1/*second*/; // 定义守护进程执行时间阈值,达到重启
+// 定义pid写入路径
+define("__PID_DIR__", __DIR__);
+// 定义日志文件路径
+// define("__LOG_FILE__", sprintf(__LOG_DIR__ . "/%s_%d.log", date("Y-m-d"), posix_getpid()));
+define("__LOG_FILE__", sprintf(__DIR__ . "/%s.log", date("Y-m-d")));
+
+// 设置error_log
+ini_set("error_log", __LOG_FILE__);
+// 加大error_log单条消息长度
+ini_set("log_errors_max_len", 4096); // http://php.net/manual/en/function.error-log.php#97546
+
+// 设置内存限制, -1不限制, 否则达到限制90%将会触发重启脚本
+ini_set("memory_limit",  -1);
+// 设置执行时间, -1不限制, 否则达到执行时间脚本将会重启
+$_SERVER["time_limit"] = -1/*second*/;
+
 
 // 循环执行,同一任务防重
 // kill pid 关闭
