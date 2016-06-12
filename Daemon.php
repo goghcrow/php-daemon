@@ -224,6 +224,7 @@ class Daemon {
             }
             if ($time_limit === null) {
                 $time_limit = isset($_SERVER["time_limit"]) ? intval($_SERVER["time_limit"]) : -1;
+                error_log("tick_function: get time_limit {$time_limit}s");
             }
 
             $this->timeMonitor($time_limit);
@@ -248,6 +249,7 @@ class Daemon {
         }
         if ($time_limit === null) {
             $time_limit = isset($_SERVER["time_limit"]) ? intval($_SERVER["time_limit"]) : -1;
+            error_log("tick_function: get time_limit {$time_limit}s");
         }
 
         $this->timeMonitor($time_limit);
